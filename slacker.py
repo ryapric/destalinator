@@ -92,6 +92,8 @@ class Slacker(WithLogger, WithConfig):
                 print(f'Auto-joining channel {cname}')
                 self.join_channel(cid)
                 payload = self.get_with_retry_to_json(murl)
+                if not payload['ok']:
+                    raise Exception("Unable to auto-join channel; are the apps's OAuth scopes set correctly?")
             messages += payload['messages']
             if payload['has_more'] is False:
                 done = True
