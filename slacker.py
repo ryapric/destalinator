@@ -88,6 +88,10 @@ class Slacker(WithLogger, WithConfig):
             else:
                 murl += "&latest={}".format(int(time.time()))
             payload = self.get_with_retry_to_json(murl)
+            if 'messages' not in payload:
+                print(f'Auto-joining channel {cname}')
+                self.join_channel(cid)
+                payload = self.get_with_retry_to_json(murl)
             messages += payload['messages']
             if payload['has_more'] is False:
                 done = True
@@ -99,6 +103,20 @@ class Slacker(WithLogger, WithConfig):
         for message in messages:
             message['channel'] = cname
         return messages
+
+    def join_channel(self, channel_id):
+        """
+        Fix for new-type Slack apps where apps need to already be in channels to
+        work.
+        """
+        url_template = self.url + "conversations.join?channel={}&token={}"
+        url = url_template.format(channel_id, self.token)
+        try:
+            res = requests.post(url)
+        except Exception:
+            time.sleep(3)
+            res = requests.post(url)
+        assert res.status_code == 200
 
     def replace_id(self, cid):
         """
@@ -223,26 +241,7 @@ class Slacker(WithLogger, WithConfig):
         url = url_template.format(exclude_archived, self.token)
         payload = self.get_with_retry_to_json(url)
         assert 'channels' in payload
-        # Hotfix for newer Slack apps
-        self.join_channels(payload['channels'])
         return payload['channels']
-    
-    def join_channels(self, channels):
-        """
-        Fix for new-type Slack apps where apps need to already be in channels to
-        work. This sucks right now, because it will try to re-join ALL channels
-        until I get a heuristic fix in
-        """
-        print('Trying to join channels not currently a member of')
-        for channel in channels:
-            url_template = self.url + "conversations.join?channel={}&token={}"
-            url = url_template.format(channel['id'], self.token)
-            try:
-                res = requests.post(url)
-            except Exception:
-                time.sleep(3)
-                res = requests.post(url)
-            assert res.status_code == 200
 
     def get_all_user_objects(self):
         url = self.url + "users.list?token=" + self.token
