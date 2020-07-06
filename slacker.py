@@ -235,7 +235,7 @@ class Slacker(WithLogger, WithConfig):
         if exclude_archived (default: True), only shows non-archived channels
         """
 
-        url_template = self.url + "conversations.list?exclude_archived={}&token={}"
+        url_template = self.url + "conversations.list?exclude_archived={}&token={}&limit=1000"
         if exclude_archived:
             exclude_archived = 1
         else:
